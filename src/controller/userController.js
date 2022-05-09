@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const isValid = function(value) {
     if (typeof value === 'undefined' || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-    if (typeof value === 'number') return false
+ 
     return true;
 }
 
@@ -88,10 +88,25 @@ const createUser = async function (req, res) {
         return res.status(400).send({ status: false, message: 'address is required' })
           
     }    
-    
+    if (address) {
+        if (!isValid(userBody.address.street)) {
+            res.status(400).send({ status: false, message: 'street is required' })
+            return
+        }
+
+        if (!isValid(userBody.address.city)) {
+            res.status(400).send({ status: false, message: 'city is required' })
+            return
+        }
+
+        if (!isValid(userBody.address.pincode)) {
+            res.status(400).send({ status: false, message: 'pincode is required' })
+            return
+        }
+    }
     //-------userCreation
     const newUser = await userModel.create(userBody)
-      return res.status(201).send({ status:true, data:newUser, msg: "user created successfully"})
+      return res.status(201).send({ status:true, msg: "user created successfully", data:newUser})
     }
 
     catch(err){
@@ -115,9 +130,7 @@ const createUser = async function (req, res) {
         if(!isValid(email)) {
             return res.status(400).send({status: false, message: 'EmailId is required'})
         }
-        if(!evalid.test(email)){
-            return res.status(400).send({status: false, message: 'please use the valid email address'})
-        }
+       
         //password validate
         if(!isValid(password)) {
             return res.status(400).send({status: false, message: 'Password is required'})
@@ -133,9 +146,9 @@ const createUser = async function (req, res) {
         const token =  jwt.sign({
             userId: user._id
         }, 'uranium_project-3_group_44',{
-            exp:"1 min"
+            expiresIn:"1 min"
         })
-
+        res.header("x-api-key", token);
         return res.status(200).send({status: true, message: 'User login successfull', data: {token}});
 
     } catch (err) {
