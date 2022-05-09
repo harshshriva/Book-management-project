@@ -1,6 +1,6 @@
-const userModels = require("../model/userModels");
- const jwt = require("jsonwebtoken");
- const validator = require('validator')
+const userModel = require("../models/userModel");
+const jwt = require("jsonwebtoken");
+
 
 const isValid = function(value) {
     if (typeof value === 'undefined' || value === null) return false
@@ -10,187 +10,137 @@ const isValid = function(value) {
 }
 
 // globelly function to validate request body is empty or not
-
+const isValidRequestBody = function(requestBody) {
+    return Object.keys(requestBody).length > 0
+}
 
 
 const createUser = async function (req, res) {
     try{   
         let  userBody = req.body
        
-        if (Object.keys(userBody) == 0) {
+        if (!isValidRequestBody(userBody)) {
             return res.status(400).send({ status: false, msg: "userDetails must be provided" });
           }
         
-    
        let { title , name, phone , email , password, address} = userBody // destructuring
     
-     
-       //----------------------------------------------------------------------------------------titleValidation
+       //---------titleValidation
        if (!isValid(title))  {
         res.status(400).send({ status: false, message: 'title is required' })
            return
         }
-        
-        //----------------------------------------------------------------------------------------nameValidation
+        if(!["Mr","Miss","Mrs"].includes(title)){
+            return res.status(400).send({status:false,msg:"Title must includes['Mr','Miss','Mrs']"})
+        }
+        //---------nameValidation
         if (!isValid(name)) {
-          res.status(400).send({ status: false, message: 'name is required' })
-            return
+            return res.status(400).send({ status: false, message: 'name is required' })
         }
 
-        let duplicateName  = await userModels.findOne({name:userBody.name})
-        if(duplicateName){
-            return res.status(400).send({ status:false, msg: ' name already exists'})
+        if(!(/^[^\s]+[a-zA-Z ][^\s]*$/).test(name)){
+            return res.status(400).send({status:false, msg:"Please use valid type of name"})
         }
     
-        //---------------------------------------------------------------------------------------phoneValidation
+        //------phoneValidation
         if (!isValid(phone)) {
-            res.status(400).send({ status: false, message: 'phone is required' })
-              return
+            return res.status(400).send({ status: false, message: 'phone is required' })
+              
         }
     
-        if (!(/^([+]\d{2})?\d{10}$/.test(userBody.phone))) {
+        if (!(/\d{10}$/).test(userBody.phone)) {
             return res.status(400).send({ status: false, msg: "please provide a valid phone Number" })
         }
     
-        let duplicatePhone  = await userModels.findOne({phone:userBody.phone})
+        let duplicatePhone  = await userModel.findOne({phone:userBody.phone})
         if(duplicatePhone){
             return res.status(400).send({ status:false, msg: 'Phone already exists'})
         }
         
-        //---------------------------------------------------------------------------------------emailValidation
+        //-----emailValidation
         if (!isValid(email)) {
-            res.status(400).send({ status: false, message: 'Email is required' })
-              return
+            return res.status(400).send({ status: false, message: 'Email is required' })
+              
         }
         
-        if (!(/^\w+([\.-]?\w+)@\w+([\. -]?\w+)(\.\w{2,3})+$/.test(userBody.email))) {
+        if (!(/^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,20}$/).test(userBody.email)) {
             return res.status(400).send({ status: false, msg: "Please provide a valid email" })
         }
     
-        let duplicateEmail  = await userModels.findOne({email:userBody.email})
+        let duplicateEmail  = await userModel.findOne({email:userBody.email})
         if(duplicateEmail){
             return res.status(400).send({ status:false, msg: 'email already exists'})
         }
     
-        //--------------------------------------------------------------------------------------passwordValidation
+        //--------passwordValidation
         if (!isValid(password)) {
-            res.status(400).send({ status: false, message: 'password is required' })
-              return
+            return res.status(400).send({ status: false, message: 'password is required' })
+             
         }
     
         if( !( /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,15}$/.test(userBody.password))) {
             return res.status(400).send({ status: false, msg: "Please provide a valid password" })
         }
-
-        let duplicatePassword  = await userModels.findOne({password:userBody.password})
-        if(duplicatePassword){
-            return res.status(400).send({ status:false, msg: 'password already exists'})
-        }
     
-    //---------------------------------------------------------------------------------------------addressValidation
+    //----------addressValidation
      
     if (!isValid(address)) {
-        res.status(400).send({ status: false, message: 'address is required' })
-          return
+        return res.status(400).send({ status: false, message: 'address is required' })
+          
+    }    
+    
+    //-------userCreation
+    const newUser = await userModel.create(userBody)
+      return res.status(201).send({ status:true, data:newUser, msg: "user created successfully"})
     }
-    
-    
-    
-    
-    
-    //---------------------------------------------------------------------------------------------userCreation
-    const newUser = await userModels.create(userBody)
-    res.status(201).send({ status:true, data:newUser, msg: "user created successfully"})
-    
-    }catch(err){
+
+    catch(err){
         res.status(500).send({status : false , msg : err.message})
     }
-    }
-    
-
-
-const isValidRequestBody = function(requestBody) {
-    return Object.keys(requestBody).length > 0
 }
 
-const doLogin = async function(req, res) {
+
+ const login = async function (req, res) {    
+    
     try {
-
-        let requestBody = req.body
-
-        // request body validation 
-
-        if (!isValidRequestBody(requestBody)) {
-            res.status(400).send({ status: false, message: 'Invalid request parameters. Please provide login details' })
-            return
+        let requestBody = req.body;
+        // check the body is empty
+        if(!isValidRequestBody(requestBody)) {
+            return res.status(400).send({status: false, message: 'Invalid request parameters,Please provide login details'})
         }
-
-        if (requestBody.email && requestBody.password) {
-
-            // email id or password is velid or not check validation 
-
-            let userEmail = await userModels.findOne({ email: requestBody.email });
-
-            if (!userEmail) {
-                return res.status(400).send({ status: true, msg: "Invalid user email" })
-            }
-
-            let userPassword = await userModels.findOne({ password: requestBody.password });
-
-            if (!userPassword) {
-                return res.status(400).send({ status: true, msg: "Invalid user password" })
-            }
-
-            // jwt token create and send back the user
-
-            let payload = { _id: userEmail._id }
-
-            let token = jwt.sign(payload, 'projectfourth', { expiresIn: '1800s' })
-
-            res.header('x-api-key', token);
-
-            res.status(200).send({ status: true, data: " user  login successfull", token: { token } })
-
-        } else {
-
-            res.status(400).send({ status: false, msg: "must contain email and password" })
-
+        // Extract keys from param
+        const {email, password} = requestBody;
+        
+        // email Validation 
+        if(!isValid(email)) {
+            return res.status(400).send({status: false, message: 'EmailId is required'})
         }
+        if(!evalid.test(email)){
+            return res.status(400).send({status: false, message: 'please use the valid email address'})
+        }
+        //password validate
+        if(!isValid(password)) {
+            return res.status(400).send({status: false, message: 'Password is required'})
+        }
+        
+        //check user in the database
+        const user = await userModel.findOne({email, password});
 
-    } catch (error) {
-        res.status(500).send({ status: false, msg: error.message });
+        if(!user) {
+            return res.status(401).send({status: false, message: 'Invalid login credentials'});
+        }
+        // creating jwt token
+        const token =  jwt.sign({
+            userId: user._id
+        }, 'uranium_project-3_group_44',{
+            exp:"1 min"
+        })
+
+        return res.status(200).send({status: true, message: 'User login successfull', data: {token}});
+
+    } catch (err) {
+        return res.status(500).send({status: false, error: err.message});
     }
-};
+}
 
-
-module.exports.createUser = createUser;
-module.exports.doLogin = doLogin;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
+module.exports = {createUser , login}
