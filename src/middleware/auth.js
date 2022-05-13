@@ -9,7 +9,7 @@ const auth =  async (req, res, next) => {
             return res.status(403).send({ status: false, message: `Missing authentication token in request` });
         }
 
-        const decoded = await  jwt.verify(token, 'uranium_project-3_group_44')
+        const decoded =  jwt.verify(token, 'uranium_project-3_group_44')
 
         if (!decoded) {
             return res.status(403).send({ status: false, message: `Invalid authentication token in request` });

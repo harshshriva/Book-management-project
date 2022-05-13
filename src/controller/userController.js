@@ -5,7 +5,6 @@ const jwt = require("jsonwebtoken");
 const isValid = function (value) {
     if (typeof value === 'undefined' || value === null) return false
     if (typeof value === 'string' && value.trim().length === 0) return false
-
     return true;
 }
 
@@ -27,32 +26,33 @@ const createUser = async function (req, res) {
 
         //---------titleValidation
         if (!isValid(title)) {
-            res.status(400).send({ status: false, message: 'title is required' })
-            return
+            return res.status(400).send({ status: false, message: 'title is required' })
         }
+        //---------title validation
         if (!["Mr", "Miss", "Mrs"].includes(title)) {
             return res.status(400).send({ status: false, msg: "Title must includes['Mr','Miss','Mrs']" })
         }
+
         //---------nameValidation
         if (!isValid(name)) {
             return res.status(400).send({ status: false, message: 'name is required' })
         }
-
-        if (!(/^[^\s]+[a-zA-Z ][^\s]*$/).test(name)) {
+        //------match name with regex
+        if (!(/^[a-zA-Z]+(\s[a-zA-Z]+)?$/).test(name)) {
             return res.status(400).send({ status: false, msg: "Please use valid type of name" })
         }
 
         //------phoneValidation
         if (!isValid(phone)) {
             return res.status(400).send({ status: false, message: 'phone is required' })
-
         }
 
-        if (!(/\d{10}$/).test(userBody.phone)) {
+        //-------match phone with regex
+        if (!(/^\d{10}$/).test(phone)) {
             return res.status(400).send({ status: false, msg: "please provide a valid phone Number" })
         }
-
-        let duplicatePhone = await userModel.findOne({ phone: userBody.phone })
+         //check if phone is already in use
+        let duplicatePhone = await userModel.findOne({ phone: phone })
         if (duplicatePhone) {
             return res.status(400).send({ status: false, msg: 'Phone already exists' })
         }
@@ -60,14 +60,14 @@ const createUser = async function (req, res) {
         //-----emailValidation
         if (!isValid(email)) {
             return res.status(400).send({ status: false, message: 'Email is required' })
-
         }
 
-        if (!(/^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,20}$/).test(userBody.email)) {
-            return res.status(400).send({ status: false, msg: "Please provide a valid email" })
+        //-------match email with regex
+        if (!(/^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,20}$/).test(email)) {
+            return res.status(400).send({ status: false, msg: "Please provide a email in correct format" })
         }
-
-        let duplicateEmail = await userModel.findOne({ email: userBody.email })
+        //check if email is already in use
+        let duplicateEmail = await userModel.findOne({ email: email })
         if (duplicateEmail) {
             return res.status(400).send({ status: false, msg: 'email already exists' })
         }
@@ -77,40 +77,35 @@ const createUser = async function (req, res) {
             return res.status(400).send({ status: false, message: 'password is required' })
 
         }
-
+        //--------match password with regex
         if (!(/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,15}$/.test(userBody.password))) {
-            return res.status(400).send({ status: false, msg: "Please provide a valid password" })
+            return res.status(400).send({ status: false, msg: "Please use first letter in uppercase, lowercase and number with min. 8 length" })
         }
-
         //----------addressValidation
-
         if (!isValid(address)) {
             return res.status(400).send({ status: false, message: 'address is required' })
-
         }
         if (address) {
-            if (!isValid(userBody.address.street)) {
-                res.status(400).send({ status: false, message: 'street is required' })
-                return
+            if (!isValid(address.street)) {
+                return res.status(400).send({ status: false, message: 'street is required' })
+                
             }
-
-            if (!isValid(userBody.address.city)) {
-                res.status(400).send({ status: false, message: 'city is required' })
-                return
+            //address match with regex 
+            if ((!isValid(address.city))|| !(/^[a-zA-Z]*$/).test(address.city)) {
+                return res.status(400).send({ status: false, message: 'city is required' })
+               
             }
-
-            if (!isValid(userBody.address.pincode)) {
-                res.status(400).send({ status: false, message: 'pincode is required' })
-                return
+            //pincode match with regex
+            if ((!isValid(address.pincode)) || !(/^\d{6}$/).test(address.pincode) ) {
+                return res.status(400).send({ status: false, message: 'Enter the pincode and only in 6 digits'})
             }
         }
         //-------userCreation
-        const newUser = await userModel.create(userBody)
+        let newUser = await userModel.create(userBody)
         return res.status(201).send({ status: true, msg: "user created successfully", data: newUser })
     }
-
     catch (err) {
-        res.status(500).send({ status: false, msg: err.message })
+      return res.status(500).send({ status: false, msg: err.message })
     }
 }
 
@@ -144,7 +139,7 @@ const login = async function (req, res) {
         }
         // creating jwt token
         const token = jwt.sign({
-            userId: user._id
+            userId: user._id.toString()
         }, 'uranium_project-3_group_44', {
             expiresIn: "60 min"
         })
