@@ -13,6 +13,8 @@ const isValidRequestBody = function (requestBody) {
 const isValidObjectId = function (objectId) {
     return mongoose.Types.ObjectId.isValid(objectId)
 }
+
+// ==============================createapi=====================================
 const reviewCreate = async function (req, res) {
     try {
         let data = req.body
@@ -65,6 +67,8 @@ const reviewCreate = async function (req, res) {
         return res.send({ error: err.message })
     }
 }
+
+// ==================================updateapi==================================
 
 const updateReview = async function (req, res) {
     try {
@@ -121,6 +125,8 @@ const updateReview = async function (req, res) {
     }
 }
 
+// ============================deleteapi============================================
+
 const deleteReviewById = async function (req, res) {
     try {
         let bookId = req.params.bookId
@@ -147,7 +153,7 @@ const deleteReviewById = async function (req, res) {
         if (!review) {
             return res.status(400).send({ status: false, msg: 'review does not exist for given bookId' })
         }
-        
+
         // set the isDeleted property of review to true 
         const deletedReview = await reviewModel.findOneAndUpdate({ _id: reviewId, bookId: bookId }, { isDeleted: true }, { new: true })
         // decrease the review count in the book
